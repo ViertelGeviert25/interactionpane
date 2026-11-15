@@ -10,8 +10,8 @@ export function App() {
         <Stack
             sx={{
                 backgroundColor: "green",
-                width: "100vw",
-                height: "100vh",
+                width: "100%",
+                height: "100%",
             }}
         >
             <InteractionPane
@@ -25,7 +25,7 @@ export function App() {
                     width="200px"
                     style={{ position: "absolute", left: "200px" }}
                 />
-                <div
+                {/* <div
                     style={{
                         position: "absolute",
                         width: "400px",
@@ -35,12 +35,12 @@ export function App() {
                         borderColor: "red",
                         borderStyle: "solid",
                     }}
-                ></div>
+                ></div> */}
                 <div style={{ position: "absolute" }}>
                     <svg height="400" width="400">
                         <polygon
                             points="0,200 200,200 100,0 0,200"
-                            class="triangle"
+                            className="triangle"
                         />
                         <circle cx="300" cy="300" r="100" fill="blue" />
                     </svg>
