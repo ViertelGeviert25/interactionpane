@@ -234,18 +234,18 @@ const InteractionPane: FC<
             id="userinputpane"
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
-            onPointerMove={handlePointerMove}
+            // onPointerMove={handlePointerMove}
             onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
+            // onTouchMove={handleTouchMove}
             onWheel={handleWheel}
-            style={{
-                touchAction: "none",
-                position: "absolute",
-                left: 0,
-                top: 0,
-                right: 0,
-                bottom: 0,
-            }}
+            // style={{
+            //     touchAction: "none",
+            //     position: "absolute",
+            //     left: 0,
+            //     top: 0,
+            //     right: 0,
+            //     bottom: 0,
+            // }}
         >
             {/* This is the div that is "moved around" using the offset and scaled automatically, in response to the user's mouse/finger gestures. 
           Note how you can pass in any children that will automatically adapt to the required scale + offset. */}

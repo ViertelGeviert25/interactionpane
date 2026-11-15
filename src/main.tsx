@@ -1,4 +1,11 @@
-import { render } from "preact";
-import { App } from "./app.tsx";
+import React from "react";
+import ReactDOM from "react-dom/client";
 
-render(<App />, document.getElementById("app")!);
+import "./index.css";
+import { App } from "./app";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+        <App />
+    </React.StrictMode>,
+);
