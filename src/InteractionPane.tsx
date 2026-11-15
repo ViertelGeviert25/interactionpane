@@ -198,6 +198,10 @@ const InteractionPane: FC<
     }
 
     function handleWheel(event: WheelEvent) {
+        if (!event.ctrlKey) {
+            return;
+        }
+
         const initialScale = scale;
         const initialOffset = { ...offset };
         let newScale = 1;

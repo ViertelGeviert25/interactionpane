@@ -1,19 +1,21 @@
 import { useState } from "react";
 import InteractionPane from "./InteractionPane";
-import { Stack } from "@mui/material";
+import { Stack, type SxProps, type Theme } from "@mui/material";
+
+const stackSx: SxProps<Theme> = {
+    backgroundColor: "green",
+    width: "80%",
+    height: "80%",
+    position: "relative",
+    overflow: "auto",
+};
 
 export function App() {
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
 
     return (
-        <Stack
-            sx={{
-                backgroundColor: "green",
-                width: "100%",
-                height: "100%",
-            }}
-        >
+        <Stack sx={stackSx}>
             <InteractionPane
                 scale={scale}
                 setScale={setScale}
@@ -25,7 +27,7 @@ export function App() {
                     width="200px"
                     style={{ position: "absolute", left: "200px" }}
                 />
-                {/* <div
+                <div
                     style={{
                         position: "absolute",
                         width: "400px",
@@ -35,7 +37,7 @@ export function App() {
                         borderColor: "red",
                         borderStyle: "solid",
                     }}
-                ></div> */}
+                ></div>
                 <div style={{ position: "absolute" }}>
                     <svg height="400" width="400">
                         <polygon
