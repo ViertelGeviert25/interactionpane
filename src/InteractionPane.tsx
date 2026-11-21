@@ -196,43 +196,47 @@ const InteractionPane: InteractionPaneProps = (props) => {
     }
   }, []);
 
-  const fitImageToScreen = useCallback(() => {
-    const image = imageRef.current;
-    const pane = paneRef.current;
-    if (!image || !pane || image.naturalWidth === 0 || image.naturalHeight === 0) {
-      return;
-    }
+  const adjustImageSize = useCallback(
+    (actualSize?: boolean) => {
+      const image = imageRef.current;
+      const pane = paneRef.current;
+      if (!image || !pane || image.naturalWidth === 0 || image.naturalHeight === 0) {
+        return;
+      }
 
-    const paneWidth = pane.clientWidth;
-    const availableHeight = pane.clientHeight - IMAGE_TOP_MARGIN;
-    if (paneWidth === 0 || availableHeight <= 0) {
-      return;
-    }
+      const paneWidth = pane.clientWidth;
+      const availableHeight = pane.clientHeight - IMAGE_TOP_MARGIN;
+      if (paneWidth === 0 || availableHeight <= 0) {
+        return;
+      }
 
-    const fitScale = Math.min(
-      1,
-      paneWidth / image.naturalWidth,
-      availableHeight / image.naturalHeight,
-    );
-    setMinimumScale(Math.min(SCALE_LIMITS.min, fitScale));
-    setScale(fitScale);
-    const fitOffset = {
-      x: paneWidth / 2,
-      y: IMAGE_TOP_MARGIN + (image.naturalHeight * fitScale) / 2,
-    };
-    setDefaultOffset(fitOffset);
-    setOffset(fitOffset);
-  }, [setDefaultOffset, setMinimumScale, setScale, setOffset]);
+      const fitScale = actualSize
+        ? 1
+        : Math.min(1, paneWidth / image.naturalWidth, availableHeight / image.naturalHeight);
+      setScale(fitScale);
+      const fitOffset = {
+        x: paneWidth / 2,
+        y: IMAGE_TOP_MARGIN + (image.naturalHeight * fitScale) / 2,
+      };
+      setOffset(fitOffset);
+
+      if (!actualSize) {
+        setMinimumScale(Math.min(SCALE_LIMITS.min, fitScale));
+        setDefaultOffset(fitOffset);
+      }
+    },
+    [setDefaultOffset, setMinimumScale, setScale, setOffset],
+  );
 
   const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
 
   const toggleImageView = useCallback(() => {
-    if (!loaded || isAtDefaultView) {
+    if (!loaded) {
       return;
     }
     setIsFitting(true);
-    fitImageToScreen();
-  }, [loaded, isAtDefaultView, fitImageToScreen]);
+    adjustImageSize(isAtDefaultView);
+  }, [loaded, isAtDefaultView, adjustImageSize]);
 
   const handlePaneNativeWheel = useEffectEvent((event: WheelEvent) => {
     if (event.target !== paneRef.current) {
@@ -248,6 +252,7 @@ const InteractionPane: InteractionPaneProps = (props) => {
       return;
     }
 
+    // TODO: hm....
     if (event.key === "0" || event.key === "1") {
       event.preventDefault();
       toggleImageView();
@@ -278,9 +283,9 @@ const InteractionPane: InteractionPaneProps = (props) => {
   }, []);
 
   const handleLoadedImage = useCallback(() => {
-    fitImageToScreen();
+    adjustImageSize();
     setLoaded(true);
-  }, [fitImageToScreen]);
+  }, [adjustImageSize]);
 
   const contentStyle = useMemo<CSSProperties>(
     () => ({ visibility: loaded ? "visible" : "hidden", userSelect: "none" }),

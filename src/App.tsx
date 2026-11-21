@@ -12,7 +12,7 @@ const stackSx: SxProps<Theme> = {
 export function App() {
   return (
     <Stack sx={stackSx}>
-      <InteractionPane contentSrc="/testdata/datenfluss.svg" />
+      <InteractionPane contentSrc="/testdata/mb_vision.jpg" />
     </Stack>
   );
 }
