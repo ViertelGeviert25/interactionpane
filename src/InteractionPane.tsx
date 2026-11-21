@@ -244,7 +244,7 @@ const InteractionPane: InteractionPaneProps = (props) => {
   }, [setDefaultOffset, setMinimumScale, setScale, setOffset]);
 
   const zoomImageToActualSize = useCallback(
-    (point?: Point) => {
+    (anchorPoint?: Point) => {
       const image = imageRef.current;
       const pane = paneRef.current;
       if (!image || !pane) {
@@ -257,23 +257,31 @@ const InteractionPane: InteractionPaneProps = (props) => {
       }
 
       setScale(view.scale);
-      if (point) {
-        setOffset(point);
+      if (anchorPoint) {
+        // Convert the pane position under the cursor into image coordinates at the current scale
+        const imageCoordinateX = (anchorPoint.x - offset.x) / scale;
+        const imageCoordinateY = (anchorPoint.y - offset.y) / scale;
+        // Move the offset so the same image coordinates remain under the cursor after scaling to the actual-size scale
+        setOffset({
+          x: anchorPoint.x - view.scale * imageCoordinateX,
+          y: anchorPoint.y - view.scale * imageCoordinateY,
+        });
       }
+      // Do not set offset if no anchor point ist set
     },
-    [setScale],
+    [scale, offset, setScale, setOffset],
   );
 
   const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
 
   const toggleImageView = useCallback(
-    (position?: Point) => {
+    (anchorPoint?: Point) => {
       if (!loaded) {
         return;
       }
       setIsFitting(true);
       if (isAtDefaultView) {
-        zoomImageToActualSize(position);
+        zoomImageToActualSize(anchorPoint);
         return;
       }
       fitImageToPane();
@@ -349,9 +357,14 @@ const InteractionPane: InteractionPaneProps = (props) => {
 
   const handleImageDoubleClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
+      const pane = paneRef.current;
+      if (!pane) {
+        return;
+      }
+      const bounds = pane.getBoundingClientRect();
       toggleImageView({
-        x: event.clientX,
-        y: event.clientY,
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
       });
     },
     [toggleImageView],
