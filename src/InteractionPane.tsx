@@ -1,4 +1,4 @@
-import { mdiRestore } from "@mdi/js";
+import { mdiFitToScreen } from "@mdi/js";
 import { Fab, Stack, type SxProps, type Theme } from "@mui/material";
 import { Icon } from "@mdi/react";
 import {
@@ -21,7 +21,8 @@ type Point = {
 const SCROLLWHEEL_FACTOR = 0.1; // Determines how quickly the scale will change in reaction to the scroll wheel
 
 const INITIAL_SCALE = 1;
-const SCALE_LIMITS = { min: 0.25, max: 50 };
+const SCALE_LIMITS = { min: 1, max: 50 };
+const IMAGE_TOP_MARGIN = 2;
 
 const userInputPaneStackSx: SxProps<Theme> = {
   touchAction: "none",
@@ -37,21 +38,24 @@ const interactionPaneContainerSx: SxProps<Theme> = {
   overflow: "hidden",
 };
 
+const fitToScreenFabSx: SxProps<Theme> = {
+  position: "fixed",
+  bottom: 50,
+  right: 50,
+  zIndex: 9999,
+};
+
 const createPoint = (): Point => ({ x: 0, y: 0 });
 
 /**
- * InteractionPane is a React component that allows end users to work with drag, pinch, and zoom using mouse
+ * InteractionPane allows end users to work with drag, pinch, and zoom using mouse
  * (scrollwheel + mouse buttons) on the desktop as well as hand gestures (pinch/zoom/drag) on mobile devices.
- * Any children places inside the InteractionPane will respond to the user interaction; they will automatically
+ * Any content placed inside the InteractionPane will respond to the user interaction; they will automatically
  * be scaled/moved as required.
  * Based on https://medium.com/@jlklooste/building-a-react-component-for-zoom-drag-for-both-desktop-and-mobile-b9b320521f13
  */
 const InteractionPane: FC<
   PropsWithChildren<{
-    // scale: number;
-    // setScale: Dispatch<SetStateAction<number>>;
-    // offset: Point;
-    // setOffset: Dispatch<SetStateAction<Point>>;
     contentSrc: string;
   }>
 > = (props) => {
@@ -60,11 +64,12 @@ const InteractionPane: FC<
   // const { scale, setScale, offset, setOffset } = props;
   const [scale, setScale] = useState(INITIAL_SCALE);
   const [offset, setOffset] = useState(createPoint());
-  // Keep the SVG hidden until its initial position is set to prevent flickering.
+  // Keep the image hidden until its initial position is set to prevent flickering.
   const [loaded, setLoaded] = useState(false);
 
   const paneRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const minimumScaleRef = useRef(SCALE_LIMITS.min);
 
   // const [initialDistanceBetweenFingers, setInitialDistanceBetweenFingers] =
   //     useState(0);
@@ -131,8 +136,8 @@ const InteractionPane: FC<
       const initialOffset = { ...offset };
       const zoomFactor = event.deltaY > 0 ? 1 - SCROLLWHEEL_FACTOR : 1 + SCROLLWHEEL_FACTOR;
       let newScale = initialScale * zoomFactor;
-      if (newScale < SCALE_LIMITS.min) {
-        newScale = SCALE_LIMITS.min;
+      if (newScale < minimumScaleRef.current) {
+        newScale = minimumScaleRef.current;
       } else if (newScale > SCALE_LIMITS.max) {
         newScale = SCALE_LIMITS.max;
       }
@@ -156,30 +161,33 @@ const InteractionPane: FC<
   );
 
   useEffect(() => {
-    const content = contentRef.current;
-    if (!content) {
+    const image = imageRef.current;
+    if (!image) {
       return;
     }
 
-    content.addEventListener("wheel", handleWheel, {
+    image.addEventListener("wheel", handleWheel, {
       passive: false,
     });
 
     return () => {
-      content.removeEventListener("wheel", handleWheel);
+      image.removeEventListener("wheel", handleWheel);
     };
   }, [scale, handleWheel]);
 
-  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragPositionStart.current = { x: event.clientX, y: event.clientY };
-    dragPositionOffsetStart.current = { ...offset };
-    isDraggingRef.current = true;
-    setIsDragging(true);
-  }
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dragPositionStart.current = { x: event.clientX, y: event.clientY };
+      dragPositionOffsetStart.current = { ...offset };
+      isDraggingRef.current = true;
+      setIsDragging(true);
+    },
+    [offset],
+  );
 
-  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+  const handlePointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -193,9 +201,9 @@ const InteractionPane: FC<
       pendingOffset.current = null;
     }
     setIsDragging(false);
-  }
+  }, []);
 
-  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+  const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (isDraggingRef.current) {
       pendingOffset.current = {
         x: dragPositionOffsetStart.current.x + event.clientX - dragPositionStart.current.x,
@@ -212,31 +220,44 @@ const InteractionPane: FC<
         });
       }
     }
-  }
+  }, []);
 
-  const resetImage = useCallback(() => {
-    setScale(INITIAL_SCALE);
-    const imageHeight = contentRef.current?.clientHeight ?? 0;
-    const paneWidth = paneRef.current?.clientWidth ?? 0;
+  const fitImageToScreen = useCallback(() => {
+    const image = imageRef.current;
+    const pane = paneRef.current;
+    if (!image || !pane || image.naturalWidth === 0 || image.naturalHeight === 0) {
+      return;
+    }
+
+    const paneWidth = pane.clientWidth;
+    const availableHeight = pane.clientHeight - IMAGE_TOP_MARGIN;
+    if (paneWidth === 0 || availableHeight <= 0) {
+      return;
+    }
+
+    const fitScale = Math.min(
+      1,
+      paneWidth / image.naturalWidth,
+      availableHeight / image.naturalHeight,
+    );
+    minimumScaleRef.current = Math.min(SCALE_LIMITS.min, fitScale);
+    setScale(fitScale);
     setOffset({
       x: paneWidth / 2,
-      y: 2 + imageHeight / 2,
+      y: IMAGE_TOP_MARGIN + (image.naturalHeight * fitScale) / 2,
     });
   }, [setScale, setOffset]);
 
   const handleLoadedImage = useCallback(() => {
-    resetImage();
+    fitImageToScreen();
     setLoaded(true);
-  }, [resetImage]);
+  }, [fitImageToScreen]);
 
   const contentStyle = useMemo<CSSProperties>(
-    () => ({ pointerEvents: "none", visibility: loaded ? "visible" : "hidden" }),
+    () => ({ visibility: loaded ? "visible" : "hidden" }),
     [loaded],
   );
 
-  // Return the rendered component
-  // The userinputpane div takes the full screen (see left, top, right and bottom attributes), this is there to capture the user's mouse / finger gestures' input.
-  // The child div of the interaction pane is the thing we move around and scale as a result of the actions.
   return (
     <Stack sx={interactionPaneContainerSx}>
       <Stack
@@ -245,35 +266,31 @@ const InteractionPane: FC<
         // onTouchMove={handleTouchMove}
         sx={userInputPaneStackSx}
       >
-        {/* This is the div that is "moved around" using the offset and scaled automatically, in response to the user's mouse/finger gestures. 
-          Note how you can pass in any children that will automatically adapt to the required scale + offset. */}
+        {/* This is the component that is "moved around" using the offset and scaled automatically, 
+        in response to the user's mouse/finger gestures. */}
         <Stack
-          component="div"
           sx={scaledStackSx}
-          ref={contentRef}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onPointerMove={handlePointerMove}
         >
-          <object
-            data={props.contentSrc}
-            type="image/svg+xml"
+          <img
+            ref={imageRef}
+            src={props.contentSrc}
+            alt="N/A"
+            draggable={false}
             style={contentStyle}
             onLoad={handleLoadedImage}
           />
         </Stack>
         <Fab
+          aria-label="Fit image to pane"
           color="primary"
-          sx={{
-            position: "fixed",
-            bottom: 50,
-            right: 50,
-            zIndex: 9999,
-          }}
-          onClick={resetImage}
+          sx={fitToScreenFabSx}
+          onClick={fitImageToScreen}
         >
-          <Icon path={mdiRestore} size={1} />
+          <Icon path={mdiFitToScreen} size={1} />
         </Fab>
       </Stack>
     </Stack>

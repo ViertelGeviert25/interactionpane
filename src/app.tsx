@@ -12,18 +12,10 @@ const stackSx: SxProps<Theme> = {
 export function App() {
   return (
     <Stack sx={stackSx}>
-      <InteractionPane
-        // scale={scale}
-        // setScale={setScale}
-        // offset={offset}
-        // setOffset={setOffset}
-        contentSrc="/testdata/sample_diagram.svg"
-      />
+      <InteractionPane contentSrc="/testdata/sample_diagram.svg" />
     </Stack>
   );
 }
 
 // TODO:
-// * nicht <object und auch nicht dangerouslyinserthtml oder so...
-// * auf mobile testen.
-// * Reset button
+// * Mobile touch umsetzen und testen.
