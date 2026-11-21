@@ -182,6 +182,17 @@ const InteractionPane: InteractionPaneProps = (props) => {
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
+      // const pane = paneRef.current;
+      // const image = imageRef.current;
+      // if (!pane || !image) {
+      //   return;
+      // }
+
+      // const imageWidth = image.getBoundingClientRect().width;
+      // if (imageWidth <= pane.clientWidth) {
+      //   return;
+      // }
+
       event.currentTarget.setPointerCapture(event.pointerId);
       paneRef.current?.focus();
       dragPositionStart.current = { x: event.clientX, y: event.clientY };
@@ -209,21 +220,37 @@ const InteractionPane: InteractionPaneProps = (props) => {
   }, []);
 
   const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    if (isDraggingRef.current) {
-      pendingOffset.current = {
-        x: dragPositionOffsetStart.current.x + event.clientX - dragPositionStart.current.x,
-        y: dragPositionOffsetStart.current.y + event.clientY - dragPositionStart.current.y,
-      };
+    if (!isDraggingRef.current) {
+      return;
+    }
+    // const pane = paneRef.current;
+    // if (!pane) {
+    //   return;
+    // }
 
-      if (dragFrame.current === null) {
-        dragFrame.current = requestAnimationFrame(() => {
-          dragFrame.current = null;
-          if (pendingOffset.current !== null) {
-            setOffset(pendingOffset.current);
-            pendingOffset.current = null;
-          }
-        });
-      }
+    const offsetX = dragPositionOffsetStart.current.x + event.clientX - dragPositionStart.current.x;
+    const offsetY = dragPositionOffsetStart.current.y + event.clientY - dragPositionStart.current.y;
+
+    // const image = imageRef.current;
+    // if (image && image.getBoundingClientRect().width > pane.clientWidth) {
+    //   // Keep the left image edge from moving beyond the left pane edge.
+    //   const imageHalfWidth = image.getBoundingClientRect().width / 2;
+    //   offsetX = Math.min(offsetX, imageHalfWidth);
+    // }
+
+    pendingOffset.current = {
+      x: offsetX,
+      y: offsetY,
+    };
+
+    if (dragFrame.current === null) {
+      dragFrame.current = requestAnimationFrame(() => {
+        dragFrame.current = null;
+        if (pendingOffset.current !== null) {
+          setOffset(pendingOffset.current);
+          pendingOffset.current = null;
+        }
+      });
     }
   }, []);
 
@@ -353,7 +380,6 @@ const InteractionPane: InteractionPaneProps = (props) => {
       if (!pane) {
         return;
       }
-      console.log("double click", event);
       const bounds = pane.getBoundingClientRect();
       toggleImageView({
         x: event.clientX - bounds.left,
