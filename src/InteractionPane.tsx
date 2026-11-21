@@ -10,6 +10,7 @@ import {
   type FC,
   type PointerEvent,
   type CSSProperties,
+  type TransitionEvent,
   useEffectEvent,
 } from "react";
 
@@ -70,6 +71,7 @@ const InteractionPane: InteractionPaneProps = (props) => {
   // Keep the image hidden until its initial position is set to prevent flickering.
   const [loaded, setLoaded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isFitting, setIsFitting] = useState(false);
 
   const paneRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -87,10 +89,11 @@ const InteractionPane: InteractionPaneProps = (props) => {
       top: `${offset.y}px`,
       transform: `translate(-50%, -50%) scale(${scale})`,
       transformOrigin: "center",
+      transition: isFitting ? "left 250ms ease, top 250ms ease, transform 250ms ease" : "none",
       userSelect: isDragging ? "none" : "auto",
       cursor: isDragging ? "grabbing" : "grab",
     }),
-    [offset, scale, isDragging],
+    [offset, scale, isDragging, isFitting],
   );
 
   const handleWheel = useCallback(
@@ -223,11 +226,12 @@ const InteractionPane: InteractionPaneProps = (props) => {
   const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
 
   const toggleImageView = useCallback(() => {
-    if (isAtDefaultView) {
+    if (!loaded || isAtDefaultView) {
       return;
     }
+    setIsFitting(true);
     fitImageToScreen();
-  }, [isAtDefaultView, fitImageToScreen]);
+  }, [loaded, isAtDefaultView, fitImageToScreen]);
 
   const handlePaneNativeWheel = useEffectEvent((event: WheelEvent) => {
     if (event.target !== paneRef.current) {
@@ -282,6 +286,12 @@ const InteractionPane: InteractionPaneProps = (props) => {
     [loaded],
   );
 
+  const handleContentTransitionEnd = useCallback((event: TransitionEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      setIsFitting(false);
+    }
+  }, []);
+
   return (
     <Stack sx={interactionPaneContainerSx}>
       <Stack
@@ -295,10 +305,12 @@ const InteractionPane: InteractionPaneProps = (props) => {
         in response to the user's mouse/finger gestures. */}
         <Stack
           sx={scaledStackSx}
+          onTransitionEnd={handleContentTransitionEnd}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onPointerMove={handlePointerMove}
+          onDoubleClick={toggleImageView}
         >
           <img
             ref={imageRef}
