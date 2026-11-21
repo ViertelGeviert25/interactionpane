@@ -1,4 +1,3 @@
-import { useState } from "react";
 import InteractionPane from "./InteractionPane";
 import { Stack, type SxProps, type Theme } from "@mui/material";
 
@@ -11,16 +10,13 @@ const stackSx: SxProps<Theme> = {
 };
 
 export function App() {
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState({ x: 500, y: 500 });
-
   return (
     <Stack sx={stackSx}>
       <InteractionPane
-        scale={scale}
-        setScale={setScale}
-        offset={offset}
-        setOffset={setOffset}
+        // scale={scale}
+        // setScale={setScale}
+        // offset={offset}
+        // setOffset={setOffset}
         contentSrc="/testdata/sample_diagram.svg"
       />
     </Stack>
@@ -28,8 +24,6 @@ export function App() {
 }
 
 // TODO:
-// * center images
 // * nicht <object und auch nicht dangerouslyinserthtml oder so...
-// * max scaling einbauen...
 // * auf mobile testen.
 // * Reset button

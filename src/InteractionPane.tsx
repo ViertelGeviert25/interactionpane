@@ -1,4 +1,6 @@
-import { Stack, type SxProps, type Theme } from "@mui/material";
+import { mdiRestore } from "@mdi/js";
+import { Fab, Stack, type SxProps, type Theme } from "@mui/material";
+import { Icon } from "@mdi/react";
 import {
   useCallback,
   useEffect,
@@ -8,8 +10,7 @@ import {
   type FC,
   type PropsWithChildren,
   type PointerEvent as ReactPointerEvent,
-  type Dispatch,
-  type SetStateAction,
+  type CSSProperties,
 } from "react";
 
 type Point = {
@@ -18,6 +19,9 @@ type Point = {
 };
 
 const SCROLLWHEEL_FACTOR = 0.1; // Determines how quickly the scale will change in reaction to the scroll wheel
+
+const INITIAL_SCALE = 1;
+const SCALE_LIMITS = { min: 0.25, max: 50 };
 
 const userInputPaneStackSx: SxProps<Theme> = {
   touchAction: "none",
@@ -44,16 +48,21 @@ const createPoint = (): Point => ({ x: 0, y: 0 });
  */
 const InteractionPane: FC<
   PropsWithChildren<{
-    scale: number;
-    setScale: Dispatch<SetStateAction<number>>;
-    offset: Point;
-    setOffset: Dispatch<SetStateAction<Point>>;
+    // scale: number;
+    // setScale: Dispatch<SetStateAction<number>>;
+    // offset: Point;
+    // setOffset: Dispatch<SetStateAction<Point>>;
     contentSrc: string;
   }>
 > = (props) => {
   //Scale determines the size of the displayed children (this react to pinch/zoom movements).
   //Offset determines the position of the displayed children (this respond to dragging movement).
-  const { scale, setScale, offset, setOffset } = props;
+  // const { scale, setScale, offset, setOffset } = props;
+  const [scale, setScale] = useState(INITIAL_SCALE);
+  const [offset, setOffset] = useState(createPoint());
+  // Keep the SVG hidden until its initial position is set to prevent flickering.
+  const [loaded, setLoaded] = useState(false);
+
   const paneRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -121,7 +130,12 @@ const InteractionPane: FC<
       const initialScale = scale;
       const initialOffset = { ...offset };
       const zoomFactor = event.deltaY > 0 ? 1 - SCROLLWHEEL_FACTOR : 1 + SCROLLWHEEL_FACTOR;
-      const newScale = initialScale * zoomFactor;
+      let newScale = initialScale * zoomFactor;
+      if (newScale < SCALE_LIMITS.min) {
+        newScale = SCALE_LIMITS.min;
+      } else if (newScale > SCALE_LIMITS.max) {
+        newScale = SCALE_LIMITS.max;
+      }
       const bounds = paneRef.current?.getBoundingClientRect();
       if (!bounds) {
         return;
@@ -200,6 +214,26 @@ const InteractionPane: FC<
     }
   }
 
+  const resetImage = useCallback(() => {
+    setScale(INITIAL_SCALE);
+    const imageHeight = contentRef.current?.clientHeight ?? 0;
+    const paneWidth = paneRef.current?.clientWidth ?? 0;
+    setOffset({
+      x: paneWidth / 2,
+      y: 2 + imageHeight / 2,
+    });
+  }, [setScale, setOffset]);
+
+  const handleLoadedImage = useCallback(() => {
+    resetImage();
+    setLoaded(true);
+  }, [resetImage]);
+
+  const contentStyle = useMemo<CSSProperties>(
+    () => ({ pointerEvents: "none", visibility: loaded ? "visible" : "hidden" }),
+    [loaded],
+  );
+
   // Return the rendered component
   // The userinputpane div takes the full screen (see left, top, right and bottom attributes), this is there to capture the user's mouse / finger gestures' input.
   // The child div of the interaction pane is the thing we move around and scale as a result of the actions.
@@ -222,8 +256,25 @@ const InteractionPane: FC<
           onPointerCancel={handlePointerUp}
           onPointerMove={handlePointerMove}
         >
-          <object data={props.contentSrc} type="image/svg+xml" style={{ pointerEvents: "none" }} />
+          <object
+            data={props.contentSrc}
+            type="image/svg+xml"
+            style={contentStyle}
+            onLoad={handleLoadedImage}
+          />
         </Stack>
+        <Fab
+          color="primary"
+          sx={{
+            position: "fixed",
+            bottom: 50,
+            right: 50,
+            zIndex: 9999,
+          }}
+          onClick={resetImage}
+        >
+          <Icon path={mdiRestore} size={1} />
+        </Fab>
       </Stack>
     </Stack>
   );
