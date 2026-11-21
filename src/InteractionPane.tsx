@@ -10,6 +10,7 @@ import {
   type FC,
   type PointerEvent,
   type CSSProperties,
+  useEffectEvent,
 } from "react";
 
 type Point = {
@@ -147,6 +148,7 @@ const InteractionPane: InteractionPaneProps = (props) => {
     (event: PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
+      paneRef.current?.focus();
       dragPositionStart.current = { x: event.clientX, y: event.clientY };
       dragPositionOffsetStart.current = { ...offset };
       isDraggingRef.current = true;
@@ -227,49 +229,48 @@ const InteractionPane: InteractionPaneProps = (props) => {
     fitImageToScreen();
   }, [isAtDefaultView, fitImageToScreen]);
 
-  const handlePaneNativeWheel = useCallback((event: WheelEvent) => {
+  const handlePaneNativeWheel = useEffectEvent((event: WheelEvent) => {
     if (event.target !== paneRef.current) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
-  }, []);
+  });
 
-  const handlePaneKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      console.log(event);
-      if (!event.ctrlKey) {
-        return;
-      }
+  const handlePaneKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (!event.ctrlKey) {
+      return;
+    }
 
-      if (event.key === "0" || event.key === "1") {
-        toggleImageView();
-      }
-    },
-    [toggleImageView],
-  );
+    if (event.key === "0" || event.key === "1") {
+      event.preventDefault();
+      toggleImageView();
+    }
+  });
 
   useEffect(() => {
     const pane = paneRef.current;
     if (!pane) {
       return;
     }
+    const handleNativeWheel = (event: WheelEvent) => handlePaneNativeWheel(event);
+    const handleKeyDown = (event: KeyboardEvent) => handlePaneKeyDown(event);
 
-    pane.addEventListener("wheel", handlePaneNativeWheel, {
+    pane.addEventListener("wheel", handleNativeWheel, {
       passive: false,
     });
 
-    pane.addEventListener("keydown", handlePaneKeyDown);
+    pane.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      pane.removeEventListener("wheel", handlePaneNativeWheel);
+      pane.removeEventListener("wheel", handleNativeWheel);
       if (dragFrame.current !== null) {
         cancelAnimationFrame(dragFrame.current);
       }
-      pane.removeEventListener("keydown", handlePaneKeyDown);
+      pane.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handlePaneNativeWheel, handlePaneKeyDown]);
+  }, []);
 
   const handleLoadedImage = useCallback(() => {
     fitImageToScreen();
@@ -283,7 +284,13 @@ const InteractionPane: InteractionPaneProps = (props) => {
 
   return (
     <Stack sx={interactionPaneContainerSx}>
-      <Stack ref={paneRef} sx={userInputPaneStackSx}>
+      <Stack
+        ref={paneRef}
+        role="region"
+        aria-label="Image viewer"
+        tabIndex={0}
+        sx={userInputPaneStackSx}
+      >
         {/* This is the component that is "moved around" using the offset and scaled automatically, 
         in response to the user's mouse/finger gestures. */}
         <Stack

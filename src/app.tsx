@@ -19,5 +19,5 @@ export function App() {
 
 // TODO:
 // * Wie in der Windows-Fotoanzeige soll man nicht ganz nach oben verschieben können!!
-// * Toggle Image View... (auch mit keyboard shorcuts muss tun)
+// * Toggle Image View...
 // * Mobile touch umsetzen und testen.
