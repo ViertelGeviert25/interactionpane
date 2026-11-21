@@ -11,6 +11,7 @@ import {
   type PointerEvent,
   type CSSProperties,
   type TransitionEvent,
+  type MouseEvent,
   useEffectEvent,
 } from "react";
 
@@ -242,35 +243,43 @@ const InteractionPane: InteractionPaneProps = (props) => {
     setOffset(view.offset);
   }, [setDefaultOffset, setMinimumScale, setScale, setOffset]);
 
-  const zoomImageToActualSize = useCallback(() => {
-    const image = imageRef.current;
-    const pane = paneRef.current;
-    if (!image || !pane) {
-      return;
-    }
+  const zoomImageToActualSize = useCallback(
+    (point?: Point) => {
+      const image = imageRef.current;
+      const pane = paneRef.current;
+      if (!image || !pane) {
+        return;
+      }
 
-    const view = calculateImageView(image, pane, true);
-    if (!view) {
-      return;
-    }
+      const view = calculateImageView(image, pane, true);
+      if (!view) {
+        return;
+      }
 
-    setScale(view.scale);
-    setOffset(view.offset);
-  }, [setScale, setOffset]);
+      setScale(view.scale);
+      if (point) {
+        setOffset(point);
+      }
+    },
+    [setScale],
+  );
 
   const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
 
-  const toggleImageView = useCallback(() => {
-    if (!loaded) {
-      return;
-    }
-    setIsFitting(true);
-    if (isAtDefaultView) {
-      zoomImageToActualSize();
-      return;
-    }
-    fitImageToPane();
-  }, [loaded, isAtDefaultView, zoomImageToActualSize, fitImageToPane]);
+  const toggleImageView = useCallback(
+    (position?: Point) => {
+      if (!loaded) {
+        return;
+      }
+      setIsFitting(true);
+      if (isAtDefaultView) {
+        zoomImageToActualSize(position);
+        return;
+      }
+      fitImageToPane();
+    },
+    [loaded, isAtDefaultView, zoomImageToActualSize, fitImageToPane],
+  );
 
   const handlePaneNativeWheel = useEffectEvent((event: WheelEvent) => {
     if (event.target !== paneRef.current) {
@@ -286,6 +295,7 @@ const InteractionPane: InteractionPaneProps = (props) => {
       return;
     }
 
+    setIsFitting(true);
     switch (event.key) {
       case "0":
         fitImageToPane();
@@ -337,6 +347,20 @@ const InteractionPane: InteractionPaneProps = (props) => {
     }
   }, []);
 
+  const handleImageDoubleClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      toggleImageView({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    },
+    [toggleImageView],
+  );
+
+  const handleFabuttonClick = useCallback(() => {
+    toggleImageView();
+  }, [toggleImageView]);
+
   return (
     <Stack sx={interactionPaneContainerSx}>
       <Stack
@@ -355,7 +379,7 @@ const InteractionPane: InteractionPaneProps = (props) => {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onPointerMove={handlePointerMove}
-          onDoubleClick={toggleImageView}
+          onDoubleClick={handleImageDoubleClick}
         >
           <img
             ref={imageRef}
@@ -378,7 +402,7 @@ const InteractionPane: InteractionPaneProps = (props) => {
             aria-label="Fit image to pane"
             color="primary"
             sx={fitToScreenFabSx}
-            onClick={toggleImageView}
+            onClick={handleFabuttonClick}
           >
             <Icon path={isAtDefaultView ? mdiFitToScreen : mdiFitToScreenOutline} size={1} />
           </Fab>

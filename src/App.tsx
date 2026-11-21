@@ -6,7 +6,7 @@ const stackSx: SxProps<Theme> = {
   width: "calc(80% - 4em)",
   height: "calc(100% - 4em)",
   margin: "2em",
-  border: "2px solid black",
+  border: "0px solid black",
 };
 
 export function App() {
@@ -19,5 +19,6 @@ export function App() {
 
 // TODO:
 // 1) zoomImageToActualSize muss cursor-position berücksichtigen (und offset setzen!)
+// onDoubleClick funktioniert nicht zuverlässig
 // 2) Wie in der Windows-Fotoanzeige soll man nicht ganz nach oben verschieben können!!
 // 3) Mobile touch umsetzen und testen.
