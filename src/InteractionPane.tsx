@@ -53,6 +53,34 @@ const createPoint = (): Point => ({ x: 0, y: 0 });
 const arePointsEqual = (pointA: Point, pointB: Point): boolean =>
   pointA.x === pointB.x && pointA.y === pointB.y;
 
+const calculateImageView = (
+  image: HTMLImageElement,
+  pane: HTMLDivElement,
+  actualSize: boolean,
+): { scale: number; offset: Point } | null => {
+  if (image.naturalWidth === 0 || image.naturalHeight === 0) {
+    return null;
+  }
+
+  const paneWidth = pane.clientWidth;
+  const availableHeight = pane.clientHeight - IMAGE_TOP_MARGIN;
+  if (paneWidth === 0 || availableHeight <= 0) {
+    return null;
+  }
+
+  const scale = actualSize
+    ? 1
+    : Math.min(1, paneWidth / image.naturalWidth, availableHeight / image.naturalHeight);
+
+  return {
+    scale,
+    offset: {
+      x: paneWidth / 2,
+      y: IMAGE_TOP_MARGIN + (image.naturalHeight * scale) / 2,
+    },
+  };
+};
+
 /**
  * InteractionPane allows end users to work with drag, pinch, and zoom using mouse
  * (scrollwheel + mouse buttons) on the desktop as well as hand gestures (pinch/zoom/drag) on mobile devices.
@@ -196,37 +224,39 @@ const InteractionPane: InteractionPaneProps = (props) => {
     }
   }, []);
 
-  const adjustImageSize = useCallback(
-    (actualSize?: boolean) => {
-      const image = imageRef.current;
-      const pane = paneRef.current;
-      if (!image || !pane || image.naturalWidth === 0 || image.naturalHeight === 0) {
-        return;
-      }
+  const fitImageToPane = useCallback(() => {
+    const image = imageRef.current;
+    const pane = paneRef.current;
+    if (!image || !pane) {
+      return;
+    }
 
-      const paneWidth = pane.clientWidth;
-      const availableHeight = pane.clientHeight - IMAGE_TOP_MARGIN;
-      if (paneWidth === 0 || availableHeight <= 0) {
-        return;
-      }
+    const view = calculateImageView(image, pane, false);
+    if (!view) {
+      return;
+    }
 
-      const fitScale = actualSize
-        ? 1
-        : Math.min(1, paneWidth / image.naturalWidth, availableHeight / image.naturalHeight);
-      setScale(fitScale);
-      const fitOffset = {
-        x: paneWidth / 2,
-        y: IMAGE_TOP_MARGIN + (image.naturalHeight * fitScale) / 2,
-      };
-      setOffset(fitOffset);
+    setMinimumScale(Math.min(SCALE_LIMITS.min, view.scale));
+    setDefaultOffset(view.offset);
+    setScale(view.scale);
+    setOffset(view.offset);
+  }, [setDefaultOffset, setMinimumScale, setScale, setOffset]);
 
-      if (!actualSize) {
-        setMinimumScale(Math.min(SCALE_LIMITS.min, fitScale));
-        setDefaultOffset(fitOffset);
-      }
-    },
-    [setDefaultOffset, setMinimumScale, setScale, setOffset],
-  );
+  const zoomImageToActualSize = useCallback(() => {
+    const image = imageRef.current;
+    const pane = paneRef.current;
+    if (!image || !pane) {
+      return;
+    }
+
+    const view = calculateImageView(image, pane, true);
+    if (!view) {
+      return;
+    }
+
+    setScale(view.scale);
+    setOffset(view.offset);
+  }, [setScale, setOffset]);
 
   const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
 
@@ -235,8 +265,12 @@ const InteractionPane: InteractionPaneProps = (props) => {
       return;
     }
     setIsFitting(true);
-    adjustImageSize(isAtDefaultView);
-  }, [loaded, isAtDefaultView, adjustImageSize]);
+    if (isAtDefaultView) {
+      zoomImageToActualSize();
+      return;
+    }
+    fitImageToPane();
+  }, [loaded, isAtDefaultView, zoomImageToActualSize, fitImageToPane]);
 
   const handlePaneNativeWheel = useEffectEvent((event: WheelEvent) => {
     if (event.target !== paneRef.current) {
@@ -252,10 +286,15 @@ const InteractionPane: InteractionPaneProps = (props) => {
       return;
     }
 
-    // TODO: hm....
-    if (event.key === "0" || event.key === "1") {
-      event.preventDefault();
-      toggleImageView();
+    switch (event.key) {
+      case "0":
+        fitImageToPane();
+        break;
+      case "1":
+        zoomImageToActualSize();
+        break;
+      default:
+        break;
     }
   });
 
@@ -283,9 +322,9 @@ const InteractionPane: InteractionPaneProps = (props) => {
   }, []);
 
   const handleLoadedImage = useCallback(() => {
-    adjustImageSize();
+    fitImageToPane();
     setLoaded(true);
-  }, [adjustImageSize]);
+  }, [fitImageToPane]);
 
   const contentStyle = useMemo<CSSProperties>(
     () => ({ visibility: loaded ? "visible" : "hidden", userSelect: "none" }),

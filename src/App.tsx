@@ -18,6 +18,6 @@ export function App() {
 }
 
 // TODO:
-// 1) Toggle Image View...
+// 1) zoomImageToActualSize muss cursor-position berücksichtigen (und offset setzen!)
 // 2) Wie in der Windows-Fotoanzeige soll man nicht ganz nach oben verschieben können!!
 // 3) Mobile touch umsetzen und testen.
