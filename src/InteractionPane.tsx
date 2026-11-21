@@ -1,5 +1,5 @@
-import { mdiFitToScreen } from "@mdi/js";
-import { Fab, Stack, type SxProps, type Theme } from "@mui/material";
+import { mdiFitToScreen, mdiFitToScreenOutline } from "@mdi/js";
+import { Fab, Stack, Tooltip, type SxProps, type Theme } from "@mui/material";
 import { Icon } from "@mdi/react";
 import {
   useCallback,
@@ -8,8 +8,7 @@ import {
   useRef,
   useState,
   type FC,
-  type PropsWithChildren,
-  type PointerEvent as ReactPointerEvent,
+  type PointerEvent,
   type CSSProperties,
 } from "react";
 
@@ -18,9 +17,12 @@ type Point = {
   y: number;
 };
 
-const SCROLLWHEEL_FACTOR = 0.1; // Determines how quickly the scale will change in reaction to the scroll wheel
+type InteractionPaneProps = FC<{
+  contentSrc: string;
+}>;
 
-const INITIAL_SCALE = 1;
+const SCROLLWHEEL_FACTOR = 0.1; // Determines how quickly the scale will change in reaction to the scroll wheel
+const INITIAL_SCALE = 1; // Initial scaling factor is 1
 const SCALE_LIMITS = { min: 1, max: 50 };
 const IMAGE_TOP_MARGIN = 2;
 
@@ -46,6 +48,8 @@ const fitToScreenFabSx: SxProps<Theme> = {
 };
 
 const createPoint = (): Point => ({ x: 0, y: 0 });
+const arePointsEqual = (pointA: Point, pointB: Point): boolean =>
+  pointA.x === pointB.x && pointA.y === pointB.y;
 
 /**
  * InteractionPane allows end users to work with drag, pinch, and zoom using mouse
@@ -54,35 +58,26 @@ const createPoint = (): Point => ({ x: 0, y: 0 });
  * be scaled/moved as required.
  * Based on https://medium.com/@jlklooste/building-a-react-component-for-zoom-drag-for-both-desktop-and-mobile-b9b320521f13
  */
-const InteractionPane: FC<
-  PropsWithChildren<{
-    contentSrc: string;
-  }>
-> = (props) => {
-  //Scale determines the size of the displayed children (this react to pinch/zoom movements).
-  //Offset determines the position of the displayed children (this respond to dragging movement).
-  // const { scale, setScale, offset, setOffset } = props;
+const InteractionPane: InteractionPaneProps = (props) => {
+  // Scale determines the size of the displayed children (this react to pinch/zoom movements)
   const [scale, setScale] = useState(INITIAL_SCALE);
+  const [minimumScale, setMinimumScale] = useState(SCALE_LIMITS.min);
+
+  // Offset determines the position of the displayed children (this respond to dragging movement)
   const [offset, setOffset] = useState(createPoint());
+  const [defaultOffset, setDefaultOffset] = useState(createPoint());
   // Keep the image hidden until its initial position is set to prevent flickering.
   const [loaded, setLoaded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const paneRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-  const minimumScaleRef = useRef(SCALE_LIMITS.min);
 
-  // const [initialDistanceBetweenFingers, setInitialDistanceBetweenFingers] =
-  //     useState(0);
-  // const [initialScale, setInitialScale] = useState(1);
-  // const [initialTouchCenter, setInitialTouchCenter] =
-  //     useState<Point>(createPoint);
-  // const [initialOffset, setInitialOffset] = useState<Point>(createPoint);
   const dragPositionStart = useRef<Point>(createPoint());
   const dragPositionOffsetStart = useRef<Point>(createPoint());
   const isDraggingRef = useRef(false);
   const pendingOffset = useRef<Point | null>(null);
   const dragFrame = useRef<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
   const scaledStackSx: SxProps<Theme> = useMemo(
     () => ({
@@ -97,33 +92,6 @@ const InteractionPane: FC<
     [offset, scale, isDragging],
   );
 
-  useEffect(() => {
-    const pane = paneRef.current;
-    if (!pane) {
-      return;
-    }
-
-    const handleNativeWheel = (event: WheelEvent) => {
-      if (event.target !== pane) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    pane.addEventListener("wheel", handleNativeWheel, {
-      passive: false,
-    });
-
-    return () => {
-      pane.removeEventListener("wheel", handleNativeWheel);
-      if (dragFrame.current !== null) {
-        cancelAnimationFrame(dragFrame.current);
-      }
-    };
-  }, []);
-
   const handleWheel = useCallback(
     (event: WheelEvent) => {
       event.preventDefault();
@@ -136,8 +104,8 @@ const InteractionPane: FC<
       const initialOffset = { ...offset };
       const zoomFactor = event.deltaY > 0 ? 1 - SCROLLWHEEL_FACTOR : 1 + SCROLLWHEEL_FACTOR;
       let newScale = initialScale * zoomFactor;
-      if (newScale < minimumScaleRef.current) {
-        newScale = minimumScaleRef.current;
+      if (newScale < minimumScale) {
+        newScale = minimumScale;
       } else if (newScale > SCALE_LIMITS.max) {
         newScale = SCALE_LIMITS.max;
       }
@@ -157,7 +125,7 @@ const InteractionPane: FC<
         y: pointerY - newScale * imageCoordinateY,
       });
     },
-    [scale, offset, setScale, setOffset],
+    [scale, minimumScale, offset, setScale, setOffset],
   );
 
   useEffect(() => {
@@ -173,10 +141,10 @@ const InteractionPane: FC<
     return () => {
       image.removeEventListener("wheel", handleWheel);
     };
-  }, [scale, handleWheel]);
+  }, [handleWheel]);
 
   const handlePointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
+    (event: PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
       dragPositionStart.current = { x: event.clientX, y: event.clientY };
@@ -187,7 +155,7 @@ const InteractionPane: FC<
     [offset],
   );
 
-  const handlePointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -203,7 +171,7 @@ const InteractionPane: FC<
     setIsDragging(false);
   }, []);
 
-  const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+  const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (isDraggingRef.current) {
       pendingOffset.current = {
         x: dragPositionOffsetStart.current.x + event.clientX - dragPositionStart.current.x,
@@ -240,13 +208,68 @@ const InteractionPane: FC<
       paneWidth / image.naturalWidth,
       availableHeight / image.naturalHeight,
     );
-    minimumScaleRef.current = Math.min(SCALE_LIMITS.min, fitScale);
+    setMinimumScale(Math.min(SCALE_LIMITS.min, fitScale));
     setScale(fitScale);
-    setOffset({
+    const fitOffset = {
       x: paneWidth / 2,
       y: IMAGE_TOP_MARGIN + (image.naturalHeight * fitScale) / 2,
+    };
+    setDefaultOffset(fitOffset);
+    setOffset(fitOffset);
+  }, [setDefaultOffset, setMinimumScale, setScale, setOffset]);
+
+  const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
+
+  const toggleImageView = useCallback(() => {
+    if (isAtDefaultView) {
+      return;
+    }
+    fitImageToScreen();
+  }, [isAtDefaultView, fitImageToScreen]);
+
+  const handlePaneNativeWheel = useCallback((event: WheelEvent) => {
+    if (event.target !== paneRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const handlePaneKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      console.log(event);
+      if (!event.ctrlKey) {
+        return;
+      }
+
+      if (event.key === "0" || event.key === "1") {
+        toggleImageView();
+      }
+    },
+    [toggleImageView],
+  );
+
+  useEffect(() => {
+    const pane = paneRef.current;
+    if (!pane) {
+      return;
+    }
+
+    pane.addEventListener("wheel", handlePaneNativeWheel, {
+      passive: false,
     });
-  }, [setScale, setOffset]);
+
+    pane.addEventListener("keydown", handlePaneKeyDown);
+
+    return () => {
+      pane.removeEventListener("wheel", handlePaneNativeWheel);
+      if (dragFrame.current !== null) {
+        cancelAnimationFrame(dragFrame.current);
+      }
+      pane.removeEventListener("keydown", handlePaneKeyDown);
+    };
+  }, [handlePaneNativeWheel, handlePaneKeyDown]);
 
   const handleLoadedImage = useCallback(() => {
     fitImageToScreen();
@@ -254,18 +277,13 @@ const InteractionPane: FC<
   }, [fitImageToScreen]);
 
   const contentStyle = useMemo<CSSProperties>(
-    () => ({ visibility: loaded ? "visible" : "hidden" }),
+    () => ({ visibility: loaded ? "visible" : "hidden", userSelect: "none" }),
     [loaded],
   );
 
   return (
     <Stack sx={interactionPaneContainerSx}>
-      <Stack
-        ref={paneRef}
-        // onTouchStart={handleTouchStart}
-        // onTouchMove={handleTouchMove}
-        sx={userInputPaneStackSx}
-      >
+      <Stack ref={paneRef} sx={userInputPaneStackSx}>
         {/* This is the component that is "moved around" using the offset and scaled automatically, 
         in response to the user's mouse/finger gestures. */}
         <Stack
@@ -284,17 +302,116 @@ const InteractionPane: FC<
             onLoad={handleLoadedImage}
           />
         </Stack>
-        <Fab
-          aria-label="Fit image to pane"
-          color="primary"
-          sx={fitToScreenFabSx}
-          onClick={fitImageToScreen}
+        <Tooltip
+          title={
+            isAtDefaultView
+              ? "Auf tatsächlicher Größe zoomen (Ctrl + 1)"
+              : "An Fenstergröße anpassen (Ctrl + 0)"
+          }
+          placement="left"
         >
-          <Icon path={mdiFitToScreen} size={1} />
-        </Fab>
+          <Fab
+            aria-label="Fit image to pane"
+            color="primary"
+            sx={fitToScreenFabSx}
+            onClick={toggleImageView}
+          >
+            <Icon path={isAtDefaultView ? mdiFitToScreen : mdiFitToScreenOutline} size={1} />
+          </Fab>
+        </Tooltip>
       </Stack>
     </Stack>
   );
 };
 
 export default InteractionPane;
+
+// const [initialDistanceBetweenFingers, setInitialDistanceBetweenFingers] =
+//     useState(0);
+// const [initialScale, setInitialScale] = useState(1);
+// const [initialTouchCenter, setInitialTouchCenter] =
+//     useState<Point>(createPoint);
+// const [initialOffset, setInitialOffset] = useState<Point>(createPoint);
+// function handleTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
+//     if (event.touches.length >= 2) {
+//         const distanceX =
+//             event.touches[1].clientX - event.touches[0].clientX;
+//         const distanceY =
+//             event.touches[1].clientY - event.touches[0].clientY;
+//         const initialDistance = Math.sqrt(
+//             distanceX * distanceX + distanceY * distanceY,
+//         );
+//         setInitialDistanceBetweenFingers(initialDistance);
+//         const centerX =
+//             event.touches[0].clientX +
+//             (event.touches[1].clientX - event.touches[0].clientX) / 2;
+//         const centerY =
+//             event.touches[0].clientY +
+//             (event.touches[1].clientY - event.touches[0].clientY) / 2;
+//         setInitialTouchCenter({
+//             x: centerX,
+//             y: centerY,
+//         });
+//         setInitialScale(scale);
+//         setInitialOffset({ ...offset });
+//     }
+// }
+
+// /*
+//  * Handles two finger actions: Pinch/zoom + two finger move
+//  * The action is initiated by handleTouchStart, and subsequently the following code is called
+//  * while the fingers are on the screen.
+//  */
+// function handleTouchMove(event: ReactTouchEvent<HTMLDivElement>) {
+//     if (event.touches.length >= 2) {
+//         //The following calculates how much the scale must changes (given the change in distance between the fingers)
+//         const distanceX =
+//             event.touches[1].clientX - event.touches[0].clientX;
+//         const distanceY =
+//             event.touches[1].clientY - event.touches[0].clientY;
+//         const currentDistanceBetweenFingers = Math.sqrt(
+//             distanceX * distanceX + distanceY * distanceY,
+//         );
+//         const scaleChange =
+//             currentDistanceBetweenFingers / initialDistanceBetweenFingers;
+//         const newScale = initialScale * scaleChange;
+//         setScale(newScale);
+
+//         //The following adapts the offset in such a way that we zoom in on the center point between the fingers
+//         //1. Take the original center, and convert it from screen coordinate space to image coordinate space
+//         const imageCoordinateX =
+//             (initialTouchCenter.x - initialOffset.x) / initialScale;
+//         const imageCoordinateY =
+//             (initialTouchCenter.y - initialOffset.y) / initialScale;
+//         //2. Calculate where this center would end up, given the new scale
+//         const wouldBeNewScreenPositionX =
+//             imageCoordinateX * newScale + initialOffset.x;
+//         const wouldBeNewScreenPositionY =
+//             imageCoordinateY * newScale + initialOffset.y;
+//         //3. Calculate the different between the two (we want it to be zero)
+//         const offsetAdjustmentX1 =
+//             initialTouchCenter.x - wouldBeNewScreenPositionX;
+//         const offsetAdjustmentY1 =
+//             initialTouchCenter.y - wouldBeNewScreenPositionY;
+
+//         //In addition, the following adapts the offset when both fingers move in a particular direction
+//         //This way you can pinch/zoom and move the canvas at the same time
+//         const currentCenterX =
+//             event.touches[0].clientX +
+//             (event.touches[1].clientX - event.touches[0].clientX) / 2;
+//         const currentCenterY =
+//             event.touches[0].clientY +
+//             (event.touches[1].clientY - event.touches[0].clientY) / 2;
+//         const offsetAdjustmentX2 = currentCenterX - initialTouchCenter.x;
+//         const offsetAdjustmentY2 = currentCenterY - initialTouchCenter.y;
+
+//         //Finally, apply both offset adjustments
+//         setOffset({
+//             x: initialOffset.x + offsetAdjustmentX1 + offsetAdjustmentX2,
+//             y: initialOffset.y + offsetAdjustmentY1 + offsetAdjustmentY2,
+//         });
+//     }
+// }
+
+// onTouchStart={handleTouchStart}
+// onTouchMove={handleTouchMove}

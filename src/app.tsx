@@ -6,16 +6,18 @@ const stackSx: SxProps<Theme> = {
   width: "calc(100% - 4em)",
   height: "calc(100% - 4em)",
   margin: "2em",
-  border: "2px solid black",
+  border: "0px solid black",
 };
 
 export function App() {
   return (
     <Stack sx={stackSx}>
-      <InteractionPane contentSrc="/testdata/sample_diagram.svg" />
+      <InteractionPane contentSrc="/testdata/mb-vision.jpg" />
     </Stack>
   );
 }
 
 // TODO:
+// * Wie in der Windows-Fotoanzeige soll man nicht ganz nach oben verschieben können!!
+// * Toggle Image View... (auch mit keyboard shorcuts muss tun)
 // * Mobile touch umsetzen und testen.
