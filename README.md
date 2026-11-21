@@ -1,32 +1,42 @@
-# React + TypeScript + Vite
+# InteractionPane
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+InteractionPane is a React and TypeScript image viewer for panning and zooming images inside a bounded pane. It supports SVG and common raster formats such as PNG and JPEG.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Fits an image into the pane when it loads; smaller images are not enlarged.
+- Drag to pan the image.
+- Hold **Ctrl** and use the mouse wheel to zoom around the pointer.
+- Use the fit button to restore the fitted view.
+- Content outside the pane is clipped instead of making the page scroll.
 
-## React Compiler
+## Technical details
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Images are rendered with the browser's `<img>` element. SVG, PNG, JPEG, and other browser-supported image formats can be used.
+- The pane fills its parent container, so the parent must have a defined width and height.
+- The initial scale is calculated from the image's intrinsic dimensions and the available pane size. The image is not scaled above its natural size.
+- The minimum zoom is the fitted scale; the maximum zoom is 50×.
+- SVG files are rendered as images, not embedded documents. Scripts and interactive elements inside an SVG are not available.
 
-## Expanding the Oxlint configuration
+## Development
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Install Node.js and npm, then run:
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Available scripts:
+
+| Command | Description |
+| --- | --- |
+| `npm run build` | Type-check TypeScript and build the production app to `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Check source files with Oxlint |
+| `npm run format` | Format source files |
+| `npm run format:check` | Check source formatting |
+
+## Technology
+
+The application is built with React, TypeScript, and Vite. Its UI uses MUI, with icons from Material Design Icons.
