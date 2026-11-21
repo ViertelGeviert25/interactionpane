@@ -58,7 +58,6 @@ const arePointsEqual = (pointA: Point, pointB: Point): boolean =>
  * (scrollwheel + mouse buttons) on the desktop as well as hand gestures (pinch/zoom/drag) on mobile devices.
  * Any content placed inside the InteractionPane will respond to the user interaction; they will automatically
  * be scaled/moved as required.
- * Based on https://medium.com/@jlklooste/building-a-react-component-for-zoom-drag-for-both-desktop-and-mobile-b9b320521f13
  */
 const InteractionPane: InteractionPaneProps = (props) => {
   // Scale determines the size of the displayed children (this react to pinch/zoom movements)
@@ -103,6 +102,8 @@ const InteractionPane: InteractionPaneProps = (props) => {
       if (!event.ctrlKey) {
         return;
       }
+
+      // Algorithm based on https://medium.com/@jlklooste/building-a-react-component-for-zoom-drag-for-both-desktop-and-mobile-b9b320521f13
 
       const initialScale = scale;
       const initialOffset = { ...offset };
