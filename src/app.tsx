@@ -3,51 +3,33 @@ import InteractionPane from "./InteractionPane";
 import { Stack, type SxProps, type Theme } from "@mui/material";
 
 const stackSx: SxProps<Theme> = {
-    backgroundColor: "green",
-    width: "80%",
-    height: "80%",
-    position: "relative",
-    overflow: "auto",
+  position: "fixed",
+  width: "calc(100% - 4em)",
+  height: "calc(100% - 4em)",
+  margin: "2em",
+  border: "3px solid black",
 };
 
 export function App() {
-    const [scale, setScale] = useState(1);
-    const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 500, y: 500 });
 
-    return (
-        <Stack sx={stackSx}>
-            <InteractionPane
-                scale={scale}
-                setScale={setScale}
-                offset={offset}
-                setOffset={setOffset}
-            >
-                <img
-                    src="https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
-                    width="200px"
-                    style={{ position: "absolute", left: "200px" }}
-                />
-                <div
-                    style={{
-                        position: "absolute",
-                        width: "400px",
-                        height: "400px",
-                        left: "0px",
-                        top: "0px",
-                        borderColor: "red",
-                        borderStyle: "solid",
-                    }}
-                ></div>
-                <div style={{ position: "absolute" }}>
-                    <svg height="400" width="400">
-                        <polygon
-                            points="0,200 200,200 100,0 0,200"
-                            className="triangle"
-                        />
-                        <circle cx="300" cy="300" r="100" fill="blue" />
-                    </svg>
-                </div>
-            </InteractionPane>
-        </Stack>
-    );
+  return (
+    <Stack sx={stackSx}>
+      <InteractionPane
+        scale={scale}
+        setScale={setScale}
+        offset={offset}
+        setOffset={setOffset}
+        contentSrc="/testdata/sample_diagram.svg"
+      />
+    </Stack>
+  );
 }
+
+// TODO:
+// * center images
+// * data einfacher als props übergeben>!!
+// * nicht <object und auch nicht dangerouslyinserthtml oder so...
+// * max scaling einbauen...
+// * auf mobile testen.

@@ -1,0 +1,62 @@
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 400 240"
+     width="800"
+     height="480">
+
+  <defs>
+    <linearGradient id="mountain" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A5B4FC"/>
+      <stop offset="100%" stop-color="#4338CA"/>
+    </linearGradient>
+
+    <linearGradient id="mountain2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#94A3B8"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#14532D"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sonne -->
+  <circle cx="310" cy="65" r="27"
+          fill="#FDE68A" opacity="0.9"/>
+
+  <!-- Hinterer Berg -->
+  <path d="M0 190 L105 65 L205 190 Z"
+        fill="url(#mountain)"/>
+
+  <!-- Schnee -->
+  <path d="M105 65 L77 105 L105 96 L130 112 Z"
+        fill="#FFFFFF"/>
+
+  <!-- Vorderer Berg -->
+  <path d="M120 190 L255 80 L400 190 Z"
+        fill="url(#mountain2)"/>
+
+  <!-- Schnee -->
+  <path d="M255 80 L227 108 L255 101 L280 119 Z"
+        fill="#FFFFFF"/>
+
+  <!-- Vordergrund -->
+  <path d="M0 190 Q100 165 200 195
+           T400 185 L400 240 L0 240 Z"
+        fill="url(#ground)"/>
+
+  <!-- Zweite Landschaftsebene -->
+  <path d="M0 215 Q130 185 240 220
+           T400 205 L400 240 L0 240 Z"
+        fill="#166534"/>
+
+  <!-- Sterne -->
+  <g fill="#FDE68A">
+    <circle cx="50" cy="35" r="2"/>
+    <circle cx="180" cy="35" r="2"/>
+    <circle cx="225" cy="50" r="1.5"/>
+    <circle cx="365" cy="115" r="2"/>
+  </g>
+
+</svg>

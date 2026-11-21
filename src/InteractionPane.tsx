@@ -1,271 +1,234 @@
+import { Stack, type SxProps, type Theme } from "@mui/material";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FC,
+  type PropsWithChildren,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent,
+} from "react";
+
+type Point = {
+  x: number;
+  y: number;
+};
+
+const SCROLLWHEEL_FACTOR = 0.1; // Determines how quickly the scale will change in reaction to the scroll wheel
+
+const userInputPaneStackSx: SxProps<Theme> = {
+  touchAction: "none",
+  position: "absolute",
+  inset: 0,
+  overflow: "hidden",
+};
+
+const interactionPaneContainerSx: SxProps<Theme> = {
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  overflow: "hidden",
+};
+
+const createPoint = (): Point => ({ x: 0, y: 0 });
+
 /**
- * @author Jeroen Kloosterman <jlklooste@gmail.com>
- *
  * InteractionPane is a React component that allows end users to work with drag, pinch, and zoom using mouse
  * (scrollwheel + mouse buttons) on the desktop as well as hand gestures (pinch/zoom/drag) on mobile devices.
  * Any children places inside the InteractionPane will respond to the user interaction; they will automatically
  * be scaled/moved as required.
- * For the developer, this abstracts away the complexity of handling various mouse and gesture events.
- * The div that responds to user input/gestures will take the size of the parent component/div.
- * See also https://medium.com/@jlklooste/building-a-react-component-for-zoom-drag-for-both-desktop-and-mobile-b9b320521f13 for an explanation.
- *
- * @example
- * Example usage (calling application):
- * import InteractionPane from "interactionpane";
- * import React, { useState } from "react";
- *
- * function App() {
- *   const [scale, setScale] = useState(1);
- *   const [offset, setOffset] = useState({ x: 0, y: 0 });
- *
- *   return (
- *     <InteractionPane
- *       scale={scale}
- *       setScale={setScale}
- *       offset={offset}
- *       setOffset={setOffset}>
- *       <img
- *         src="https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
- *         width="200px"
- *         style={{ position: "absolute", left: "200px" }}
- *       />
- *       <div
- *         style={{
- *           position: "absolute",
- *           width: "400px",
- *           height: "400px",
- *           left: "0px",
- *           top: "0px",
- *           borderColor: "red",
- *           borderStyle: "solid",
- *         }}>
- *       </div>
- *       <div style={{ position: "absolute" }}>
- *         <svg height="400" width="400">
- *           <polygon points="0,200 200,200 100,0 0,200" class="triangle" />
- *           <circle cx="300" cy="300" r="100" fill="blue" />
- *         </svg>
- *       </div>
- *     </InteractionPane>
- *   );
- * }
- *
- * export default App;
+ * Based on https://medium.com/@jlklooste/building-a-react-component-for-zoom-drag-for-both-desktop-and-mobile-b9b320521f13
  */
-import { useState, type FC, type PropsWithChildren } from "react";
-
-const SCROLLWHEEL_FACTOR = 0.1; ////SCROLLWHEEL_FACTOR determines how quickly the scale will change in reaction to the scroll wheel.
-
 const InteractionPane: FC<
-    PropsWithChildren<{
-        scale: number;
-        setScale: Function;
-        offset: {
-            x: number;
-            y: number;
-        };
-        setOffset: Function;
-    }>
+  PropsWithChildren<{
+    scale: number;
+    setScale: Function;
+    offset: {
+      x: number;
+      y: number;
+    };
+    setOffset: Function;
+    contentSrc: string;
+  }>
 > = (props) => {
-    //Scale determines the size of the displayed children (this react to pinch/zoom movements).
-    //Offset determines the position of the displayed children (this respond to dragging movement).
-    const { scale, setScale, offset, setOffset, children } = props;
+  //Scale determines the size of the displayed children (this react to pinch/zoom movements).
+  //Offset determines the position of the displayed children (this respond to dragging movement).
+  const { scale, setScale, offset, setOffset } = props;
+  const paneRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-    const [initialDistanceBetweenFingers, setInitialDistanceBetweenFingers] =
-        useState(0);
-    const [initialScale, setInitialScale] = useState(1);
-    const [initialTouchCenter, setInitialTouchCenter] = useState<{
-        x: number;
-        y: number;
-    }>({ x: 0, y: 0 });
-    const [initialOffset, setInitialOffset] = useState<{
-        x: number;
-        y: number;
-    }>({ x: 0, y: 0 });
-    const [dragPositionStart, setDragPositionStart] = useState<{
-        x: number;
-        y: number;
-    }>({ x: 0, y: 0 });
-    const [dragPositionOffsetStart, setDragPositionOffsetStart] = useState<{
-        x: number;
-        y: number;
-    }>({ x: 0, y: 0 });
-    const [isDragging, setIsDragging] = useState(false);
+  // const [initialDistanceBetweenFingers, setInitialDistanceBetweenFingers] =
+  //     useState(0);
+  // const [initialScale, setInitialScale] = useState(1);
+  // const [initialTouchCenter, setInitialTouchCenter] =
+  //     useState<Point>(createPoint);
+  // const [initialOffset, setInitialOffset] = useState<Point>(createPoint);
+  const dragPositionStart = useRef<Point>(createPoint());
+  const dragPositionOffsetStart = useRef<Point>(createPoint());
+  const isDraggingRef = useRef(false);
+  const pendingOffset = useRef<Point | null>(null);
+  const dragFrame = useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-    function handlePointerDown(event: PointerEvent) {
-        console.log("pointerDown");
-        const newDragPositionStart = { x: event.clientX, y: event.clientY };
-        setDragPositionStart(newDragPositionStart); //Position start on the interactionpane
-        setDragPositionOffsetStart({ ...offset }); //Position offset start original, before the drag action
-        setIsDragging(true);
+  const scaledStackSx: SxProps<Theme> = useMemo(
+    () => ({
+      position: "absolute",
+      left: `${offset.x}px`,
+      top: `${offset.y}px`,
+      transform: `translate(-50%, -50%) scale(${scale})`,
+      transformOrigin: "center",
+      userSelect: isDragging ? "none" : "auto",
+      cursor: isDragging ? "grabbing" : "grab",
+    }),
+    [offset, scale, isDragging],
+  );
+
+  useEffect(() => {
+    const pane = paneRef.current;
+    if (!pane) {
+      return;
     }
 
-    function handlePointerUp() {
-        setIsDragging(false);
+    const handleNativeWheel = (event: WheelEvent) => {
+      if (event.target !== pane) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    pane.addEventListener("wheel", handleNativeWheel, {
+      passive: false,
+    });
+
+    return () => {
+      pane.removeEventListener("wheel", handleNativeWheel);
+      if (dragFrame.current !== null) {
+        cancelAnimationFrame(dragFrame.current);
+      }
+    };
+  }, []);
+
+  const handleWheel = useCallback(
+    (event: WheelEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!event.ctrlKey) {
+        return;
+      }
+
+      const initialScale = scale;
+      const initialOffset = { ...offset };
+      const zoomFactor = event.deltaY > 0 ? 1 - SCROLLWHEEL_FACTOR : 1 + SCROLLWHEEL_FACTOR;
+      const newScale = initialScale * zoomFactor;
+      const bounds = paneRef.current?.getBoundingClientRect();
+      if (!bounds) {
+        return;
+      }
+
+      const pointerX = event.clientX - bounds.left;
+      const pointerY = event.clientY - bounds.top;
+      const imageCoordinateX = (pointerX - initialOffset.x) / initialScale;
+      const imageCoordinateY = (pointerY - initialOffset.y) / initialScale;
+
+      setScale(newScale);
+      setOffset({
+        x: pointerX - newScale * imageCoordinateX,
+        y: pointerY - newScale * imageCoordinateY,
+      });
+    },
+    [scale, offset, setScale, setOffset],
+  );
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) {
+      return;
     }
 
-    function handlePointerMove(event: PointerEvent) {
-        if (isDragging) {
-            const dragPositionEnd = { x: event.clientX, y: event.clientY };
-            const deltaX = dragPositionEnd.x - dragPositionStart.x;
-            const deltaY = dragPositionEnd.y - dragPositionStart.y;
-            setOffset({
-                x: Math.round(dragPositionOffsetStart.x + deltaX),
-                y: Math.round(dragPositionOffsetStart.y + deltaY),
-            });
-        }
+    content.addEventListener("wheel", handleWheel, {
+      passive: false,
+    });
+
+    return () => {
+      content.removeEventListener("wheel", handleWheel);
+    };
+  }, [scale, handleWheel]);
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragPositionStart.current = { x: event.clientX, y: event.clientY };
+    dragPositionOffsetStart.current = { ...offset };
+    isDraggingRef.current = true;
+    setIsDragging(true);
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
-
-    function handleTouchStart(event: TouchEvent) {
-        if (event.touches.length >= 2) {
-            const distanceX =
-                event.touches[1].clientX - event.touches[0].clientX;
-            const distanceY =
-                event.touches[1].clientY - event.touches[0].clientY;
-            const initialDistance = Math.sqrt(
-                distanceX * distanceX + distanceY * distanceY,
-            );
-            setInitialDistanceBetweenFingers(initialDistance);
-            const centerX =
-                event.touches[0].clientX +
-                (event.touches[1].clientX - event.touches[0].clientX) / 2;
-            const centerY =
-                event.touches[0].clientY +
-                (event.touches[1].clientY - event.touches[0].clientY) / 2;
-            setInitialTouchCenter({
-                x: centerX,
-                y: centerY,
-            });
-            setInitialScale(scale);
-            setInitialOffset({ ...offset });
-        }
+    isDraggingRef.current = false;
+    if (dragFrame.current !== null) {
+      cancelAnimationFrame(dragFrame.current);
+      dragFrame.current = null;
     }
-
-    /*
-     * Handles two finger actions: Pinch/zoom + two finger move
-     * The action is initiated by handleTouchStart, and subsequently the following code is called
-     * while the fingers are on the screen.
-     */
-    function handleTouchMove(event: TouchEvent) {
-        if (event.touches.length >= 2) {
-            //The following calculates how much the scale must changes (given the change in distance between the fingers)
-            const distanceX =
-                event.touches[1].clientX - event.touches[0].clientX;
-            const distanceY =
-                event.touches[1].clientY - event.touches[0].clientY;
-            const currentDistanceBetweenFingers = Math.sqrt(
-                distanceX * distanceX + distanceY * distanceY,
-            );
-            const scaleChange =
-                currentDistanceBetweenFingers / initialDistanceBetweenFingers;
-            const newScale = initialScale * scaleChange;
-            setScale(newScale);
-
-            //The following adapts the offset in such a way that we zoom in on the center point between the fingers
-            //1. Take the original center, and convert it from screen coordinate space to image coordinate space
-            const imageCoordinateX =
-                (initialTouchCenter.x - initialOffset.x) / initialScale;
-            const imageCoordinateY =
-                (initialTouchCenter.y - initialOffset.y) / initialScale;
-            //2. Calculate where this center would end up, given the new scale
-            const wouldBeNewScreenPositionX =
-                imageCoordinateX * newScale + initialOffset.x;
-            const wouldBeNewScreenPositionY =
-                imageCoordinateY * newScale + initialOffset.y;
-            //3. Calculate the different between the two (we want it to be zero)
-            const offsetAdjustmentX1 =
-                initialTouchCenter.x - wouldBeNewScreenPositionX;
-            const offsetAdjustmentY1 =
-                initialTouchCenter.y - wouldBeNewScreenPositionY;
-
-            //In addition, the following adapts the offset when both fingers move in a particular direction
-            //This way you can pinch/zoom and move the canvas at the same time
-            const currentCenterX =
-                event.touches[0].clientX +
-                (event.touches[1].clientX - event.touches[0].clientX) / 2;
-            const currentCenterY =
-                event.touches[0].clientY +
-                (event.touches[1].clientY - event.touches[0].clientY) / 2;
-            const offsetAdjustmentX2 = currentCenterX - initialTouchCenter.x;
-            const offsetAdjustmentY2 = currentCenterY - initialTouchCenter.y;
-
-            //Finally, apply both offset adjustments
-            setOffset({
-                x: initialOffset.x + offsetAdjustmentX1 + offsetAdjustmentX2,
-                y: initialOffset.y + offsetAdjustmentY1 + offsetAdjustmentY2,
-            });
-        }
+    if (pendingOffset.current !== null) {
+      setOffset(pendingOffset.current);
+      pendingOffset.current = null;
     }
+    setIsDragging(false);
+  }
 
-    function handleWheel(event: WheelEvent) {
-        if (!event.ctrlKey) {
-            return;
-        }
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (isDraggingRef.current) {
+      pendingOffset.current = {
+        x: dragPositionOffsetStart.current.x + event.clientX - dragPositionStart.current.x,
+        y: dragPositionOffsetStart.current.y + event.clientY - dragPositionStart.current.y,
+      };
 
-        const initialScale = scale;
-        const initialOffset = { ...offset };
-        let newScale = 1;
-        if (event.deltaY > 0)
-            newScale = initialScale * (1 - SCROLLWHEEL_FACTOR);
-        else newScale = initialScale * (1 + SCROLLWHEEL_FACTOR);
-        setScale(newScale);
-        //1. Take the center, and convert it from screen coordinate space to image coordinate space.
-        const imageCoordinateX =
-            (event.clientX - initialOffset.x) / initialScale;
-        const imageCoordinateY =
-            (event.clientY - initialOffset.y) / initialScale;
-        //2. The following adapts the offset in such a way that we zoom in on point where the scroll wheel is used.
-        const newOffsetX =
-            initialOffset.x +
-            initialScale * imageCoordinateX -
-            newScale * imageCoordinateX;
-        const newOffsetY =
-            initialOffset.y +
-            initialScale * imageCoordinateY -
-            newScale * imageCoordinateY;
-        //Finally, apply the adjustment
-        setOffset({
-            x: newOffsetX,
-            y: newOffsetY,
+      if (dragFrame.current === null) {
+        dragFrame.current = requestAnimationFrame(() => {
+          dragFrame.current = null;
+          if (pendingOffset.current !== null) {
+            setOffset(pendingOffset.current);
+            pendingOffset.current = null;
+          }
         });
+      }
     }
+  }
 
-    // Return the rendered component
-    // The userinputpane div takes the full screen (see left, top, right and bottom attributes), this is there to capture the user's mouse / finger gestures' input.
-    // The child div of the interaction pane is the thing we move around and scale as a result of the actions.
-    return (
-        <div
-            id="userinputpane"
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            // onPointerMove={handlePointerMove}
-            onTouchStart={handleTouchStart}
-            // onTouchMove={handleTouchMove}
-            onWheel={handleWheel}
-            // style={{
-            //     touchAction: "none",
-            //     position: "absolute",
-            //     left: 0,
-            //     top: 0,
-            //     right: 0,
-            //     bottom: 0,
-            // }}
-        >
-            {/* This is the div that is "moved around" using the offset and scaled automatically, in response to the user's mouse/finger gestures. 
+  // Return the rendered component
+  // The userinputpane div takes the full screen (see left, top, right and bottom attributes), this is there to capture the user's mouse / finger gestures' input.
+  // The child div of the interaction pane is the thing we move around and scale as a result of the actions.
+  return (
+    <Stack sx={interactionPaneContainerSx}>
+      <Stack
+        ref={paneRef}
+        // onTouchStart={handleTouchStart}
+        // onTouchMove={handleTouchMove}
+        sx={userInputPaneStackSx}
+      >
+        {/* This is the div that is "moved around" using the offset and scaled automatically, in response to the user's mouse/finger gestures. 
           Note how you can pass in any children that will automatically adapt to the required scale + offset. */}
-            <div
-                style={{
-                    position: "absolute",
-                    left: `${offset.x}px`,
-                    top: `${offset.y}px`,
-                    transform: `scale(${scale})`,
-                    transformOrigin: "top left",
-                }}
-            >
-                {children}
-            </div>
-        </div>
-    );
+        <Stack
+          component="div"
+          sx={scaledStackSx}
+          ref={contentRef}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onPointerMove={handlePointerMove}
+        >
+          <object data={props.contentSrc} type="image/svg+xml" style={{ pointerEvents: "none" }} />
+        </Stack>
+      </Stack>
+    </Stack>
+  );
 };
 
 export default InteractionPane;
