@@ -6,18 +6,17 @@ const stackSx: SxProps<Theme> = {
   width: "calc(80% - 4em)",
   height: "calc(100% - 4em)",
   margin: "2em",
-  border: "0px solid black",
+  border: "2px solid red",
 };
 
 export function App() {
   return (
     <Stack sx={stackSx}>
-      <InteractionPane contentSrc="/testdata/mb_vision.jpg" />
+      <InteractionPane contentSrc="/testdata/landscape.svg" />
     </Stack>
   );
 }
 
 // TODO:
-// 1) onDoubleClick funktioniert nicht zuverlässig
-// 2) Wie in der Windows-Fotoanzeige soll man nicht ganz nach oben verschieben können!!
-// 3) Mobile touch umsetzen und testen.
+// 1) Wie in der Windows-Fotoanzeige soll man nicht ganz nach oben verschieben können!!
+// 2) Mobile touch umsetzen und testen.

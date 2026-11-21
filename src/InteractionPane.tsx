@@ -10,7 +10,6 @@ import {
   type FC,
   type PointerEvent,
   type CSSProperties,
-  type TransitionEvent,
   type MouseEvent,
   useEffectEvent,
 } from "react";
@@ -99,7 +98,6 @@ const InteractionPane: InteractionPaneProps = (props) => {
   // Keep the image hidden until its initial position is set to prevent flickering.
   const [loaded, setLoaded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isFitting, setIsFitting] = useState(false);
 
   const paneRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -117,11 +115,11 @@ const InteractionPane: InteractionPaneProps = (props) => {
       top: `${offset.y}px`,
       transform: `translate(-50%, -50%) scale(${scale})`,
       transformOrigin: "center",
-      transition: isFitting ? "left 250ms ease, top 250ms ease, transform 250ms ease" : "none",
+      // transition: isFitting ? "left 250ms ease, top 250ms ease, transform 250ms ease" : "none",
       userSelect: isDragging ? "none" : "auto",
       cursor: isDragging ? "grabbing" : "grab",
     }),
-    [offset, scale, isDragging, isFitting],
+    [offset, scale, isDragging],
   );
 
   const handleWheel = useCallback(
@@ -179,7 +177,6 @@ const InteractionPane: InteractionPaneProps = (props) => {
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
       paneRef.current?.focus();
       dragPositionStart.current = { x: event.clientX, y: event.clientY };
@@ -279,7 +276,6 @@ const InteractionPane: InteractionPaneProps = (props) => {
       if (!loaded) {
         return;
       }
-      setIsFitting(true);
       if (isAtDefaultView) {
         zoomImageToActualSize(anchorPoint);
         return;
@@ -303,7 +299,6 @@ const InteractionPane: InteractionPaneProps = (props) => {
       return;
     }
 
-    setIsFitting(true);
     switch (event.key) {
       case "0":
         fitImageToPane();
@@ -349,18 +344,13 @@ const InteractionPane: InteractionPaneProps = (props) => {
     [loaded],
   );
 
-  const handleContentTransitionEnd = useCallback((event: TransitionEvent<HTMLDivElement>) => {
-    if (event.target === event.currentTarget) {
-      setIsFitting(false);
-    }
-  }, []);
-
   const handleImageDoubleClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       const pane = paneRef.current;
       if (!pane) {
         return;
       }
+      console.log("double click", event);
       const bounds = pane.getBoundingClientRect();
       toggleImageView({
         x: event.clientX - bounds.left,
@@ -387,7 +377,6 @@ const InteractionPane: InteractionPaneProps = (props) => {
         in response to the user's mouse/finger gestures. */}
         <Stack
           sx={scaledStackSx}
-          onTransitionEnd={handleContentTransitionEnd}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
