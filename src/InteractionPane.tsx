@@ -33,6 +33,9 @@ const userInputPaneStackSx: SxProps<Theme> = {
   position: "absolute",
   inset: 0,
   overflow: "hidden",
+  "&:focus": {
+    outline: "none",
+  },
 };
 
 const interactionPaneContainerSx: SxProps<Theme> = {
@@ -108,6 +111,8 @@ const InteractionPane: InteractionPaneProps = (props) => {
   const pendingOffset = useRef<Point | null>(null);
   const dragFrame = useRef<number | null>(null);
 
+  const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
+
   const scaledStackSx: SxProps<Theme> = useMemo(
     () => ({
       position: "absolute",
@@ -117,9 +122,9 @@ const InteractionPane: InteractionPaneProps = (props) => {
       transformOrigin: "center",
       // transition: isFitting ? "left 250ms ease, top 250ms ease, transform 250ms ease" : "none",
       userSelect: isDragging ? "none" : "auto",
-      cursor: isDragging ? "grabbing" : "grab",
+      cursor: isAtDefaultView ? "default" : isDragging ? "grabbing" : "grab",
     }),
-    [offset, scale, isDragging],
+    [offset, scale, isDragging, isAtDefaultView],
   );
 
   const handleWheel = useCallback(
@@ -268,8 +273,6 @@ const InteractionPane: InteractionPaneProps = (props) => {
     },
     [scale, offset, setScale, setOffset],
   );
-
-  const isAtDefaultView = loaded && scale === minimumScale && arePointsEqual(offset, defaultOffset);
 
   const toggleImageView = useCallback(
     (anchorPoint?: Point) => {
