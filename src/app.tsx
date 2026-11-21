@@ -7,7 +7,7 @@ const stackSx: SxProps<Theme> = {
   width: "calc(100% - 4em)",
   height: "calc(100% - 4em)",
   margin: "2em",
-  border: "3px solid black",
+  border: "2px solid black",
 };
 
 export function App() {
@@ -29,7 +29,7 @@ export function App() {
 
 // TODO:
 // * center images
-// * data einfacher als props übergeben>!!
 // * nicht <object und auch nicht dangerouslyinserthtml oder so...
 // * max scaling einbauen...
 // * auf mobile testen.
+// * Reset button

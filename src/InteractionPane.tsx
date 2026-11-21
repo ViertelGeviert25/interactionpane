@@ -8,7 +8,8 @@ import {
   type FC,
   type PropsWithChildren,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 
 type Point = {
@@ -44,12 +45,9 @@ const createPoint = (): Point => ({ x: 0, y: 0 });
 const InteractionPane: FC<
   PropsWithChildren<{
     scale: number;
-    setScale: Function;
-    offset: {
-      x: number;
-      y: number;
-    };
-    setOffset: Function;
+    setScale: Dispatch<SetStateAction<number>>;
+    offset: Point;
+    setOffset: Dispatch<SetStateAction<Point>>;
     contentSrc: string;
   }>
 > = (props) => {
