@@ -43,9 +43,9 @@ const interactionPaneContainerSx: SxProps<Theme> = {
 };
 
 const fitToScreenFabSx: SxProps<Theme> = {
-  position: "fixed",
-  bottom: 50,
-  right: 50,
+  position: "absolute",
+  bottom: 24,
+  right: 24,
   zIndex: 9999,
 };
 

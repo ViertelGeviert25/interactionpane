@@ -3,10 +3,10 @@ import { Stack, type SxProps, type Theme } from "@mui/material";
 
 const stackSx: SxProps<Theme> = {
   position: "fixed",
-  width: "calc(100% - 4em)",
+  width: "calc(80% - 4em)",
   height: "calc(100% - 4em)",
   margin: "2em",
-  border: "0px solid black",
+  border: "2px solid black",
 };
 
 export function App() {
