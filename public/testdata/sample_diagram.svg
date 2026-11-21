@@ -1,55 +1,45 @@
-
-<svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 400 240"
-     width="800"
-     height="480">
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" width="800" height="480">
   <defs>
-    <linearGradient id="mountain" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="svg_sky_01" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+
+    <linearGradient id="svg_mtn_01" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#A5B4FC"/>
       <stop offset="100%" stop-color="#4338CA"/>
     </linearGradient>
 
-    <linearGradient id="mountain2" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="svg_mtn_02" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#94A3B8"/>
       <stop offset="100%" stop-color="#334155"/>
     </linearGradient>
 
-    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="svg_gnd_01" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#22C55E"/>
       <stop offset="100%" stop-color="#14532D"/>
     </linearGradient>
   </defs>
 
+  <!-- Blauer Himmel -->
+  <rect x="0" y="0" width="400" height="240" fill="url(#svg_sky_01)"/>
+
   <!-- Sonne -->
-  <circle cx="310" cy="65" r="27"
-          fill="#FDE68A" opacity="0.9"/>
+  <circle cx="310" cy="65" r="27" fill="#FDE68A" opacity="0.9"/>
 
-  <!-- Hinterer Berg -->
-  <path d="M0 190 L105 65 L205 190 Z"
-        fill="url(#mountain)"/>
+  <!-- Hinterer Berg (reicht jetzt tief bis y=215) -->
+  <path d="M0 215 L105 65 L205 215 Z" fill="url(#svg_mtn_01)"/>
+  <path d="M105 65 L77 105 L105 96 L130 112 Z" fill="#FFFFFF"/>
 
-  <!-- Schnee -->
-  <path d="M105 65 L77 105 L105 96 L130 112 Z"
-        fill="#FFFFFF"/>
-
-  <!-- Vorderer Berg -->
-  <path d="M120 190 L255 80 L400 190 Z"
-        fill="url(#mountain2)"/>
-
-  <!-- Schnee -->
-  <path d="M255 80 L227 108 L255 101 L280 119 Z"
-        fill="#FFFFFF"/>
+  <!-- Vorderer Berg (reicht jetzt tief bis y=215) -->
+  <path d="M120 215 L255 80 L400 215 Z" fill="url(#svg_mtn_02)"/>
+  <path d="M255 80 L227 108 L255 101 L280 119 Z" fill="#FFFFFF"/>
 
   <!-- Vordergrund -->
-  <path d="M0 190 Q100 165 200 195
-           T400 185 L400 240 L0 240 Z"
-        fill="url(#ground)"/>
+  <path d="M0 185 Q100 160 200 185 T400 180 L400 240 L0 240 Z" fill="url(#svg_gnd_01)"/>
 
   <!-- Zweite Landschaftsebene -->
-  <path d="M0 215 Q130 185 240 220
-           T400 205 L400 240 L0 240 Z"
-        fill="#166534"/>
+  <path d="M0 215 Q130 185 240 220 T400 205 L400 240 L0 240 Z" fill="#166534"/>
 
   <!-- Sterne -->
   <g fill="#FDE68A">
@@ -58,5 +48,4 @@
     <circle cx="225" cy="50" r="1.5"/>
     <circle cx="365" cy="115" r="2"/>
   </g>
-
 </svg>
