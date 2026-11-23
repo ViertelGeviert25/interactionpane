@@ -182,16 +182,22 @@ const InteractionPane: InteractionPaneProps = (props) => {
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
-      // const pane = paneRef.current;
-      // const image = imageRef.current;
-      // if (!pane || !image) {
-      //   return;
-      // }
+      const pane = paneRef.current;
+      const image = imageRef.current;
+      if (!pane || !image) {
+        return;
+      }
 
-      // const imageWidth = image.getBoundingClientRect().width;
-      // if (imageWidth <= pane.clientWidth) {
-      //   return;
-      // }
+      const imageBounds = image.getBoundingClientRect();
+      const paneBounds = pane.getBoundingClientRect();
+      if (
+        imageBounds.left >= paneBounds.left &&
+        imageBounds.right <= paneBounds.right &&
+        imageBounds.top >= paneBounds.top &&
+        imageBounds.bottom <= paneBounds.bottom
+      ) {
+        return;
+      }
 
       event.currentTarget.setPointerCapture(event.pointerId);
       paneRef.current?.focus();
@@ -223,20 +229,16 @@ const InteractionPane: InteractionPaneProps = (props) => {
     if (!isDraggingRef.current) {
       return;
     }
-    // const pane = paneRef.current;
-    // if (!pane) {
-    //   return;
-    // }
 
-    const offsetX = dragPositionOffsetStart.current.x + event.clientX - dragPositionStart.current.x;
+    let offsetX = dragPositionOffsetStart.current.x + event.clientX - dragPositionStart.current.x;
     const offsetY = dragPositionOffsetStart.current.y + event.clientY - dragPositionStart.current.y;
 
-    // const image = imageRef.current;
-    // if (image && image.getBoundingClientRect().width > pane.clientWidth) {
-    //   // Keep the left image edge from moving beyond the left pane edge.
-    //   const imageHalfWidth = image.getBoundingClientRect().width / 2;
-    //   offsetX = Math.min(offsetX, imageHalfWidth);
-    // }
+    const image = imageRef.current;
+    if (image) {
+      // Keep the left image edge from moving beyond the left pane edge.
+      const imageHalfWidth = image.getBoundingClientRect().width / 2;
+      offsetX = Math.min(offsetX, imageHalfWidth);
+    }
 
     pendingOffset.current = {
       x: offsetX,
